@@ -6,7 +6,7 @@
 -- =====================================================================
 
 -- PART 1: valid sample data
-USE crowdfunding;
+USE Crowdfunding_db;
 INSERT INTO USER_ACCOUNT (Email,PasswordHash,FullName,Country) VALUES ('a@x.com','h','Ann','CA'),('b@x.com','h','Bob','US');
 INSERT INTO CREATOR (UserID,DisplayName) VALUES (1,'AnnMakes');
 INSERT INTO BACKER (UserID,BackerSince) VALUES (2,'2026-01-01');
