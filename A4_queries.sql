@@ -1,14 +1,15 @@
 -- =====================================================================
--- CP363 Assignment 3 - SQL Queries
+-- CP363 Assignment 4 - SQL Queries and Views
 -- Group 43: Abisan Vijayakaran, Richey Zhang
 -- =====================================================================
-USE crowdfunding;
+USE crowdfunding_a4;
 
 -- ---------------------------------------------------------------------
 -- Q1. Live campaigns, soonest deadline first
 --     Use case: homepage "ending soon" list.
 --     Covers: WHERE selection, INNER JOIN (3 tables), ORDER BY
 -- ---------------------------------------------------------------------
+SELECT 'Q1. Live campaigns, soonest deadline first' AS Report;
 SELECT  c.CampaignID,
         c.Title        AS Campaign,
         cr.DisplayName AS Creator,
@@ -28,6 +29,7 @@ ORDER BY c.EndDate;
 --     Use case: business report on which categories attract backers.
 --     Covers: LEFT JOIN (4 tables), COUNT, SUM, GROUP BY, ORDER BY
 -- ---------------------------------------------------------------------
+SELECT 'Q2. Funding raised per category (categories with no pledges still shown)' AS Report;
 SELECT  cat.Name                        AS Category,
         COUNT(DISTINCT c.CampaignID)    AS Campaigns,
         COUNT(p.PledgeID)               AS ValidPledges,
@@ -47,6 +49,7 @@ ORDER BY TotalPledged DESC, cat.Name;
 --     Covers: INNER JOIN (4 tables), WHERE, COUNT, SUM, AVG,
 --             GROUP BY, HAVING, ORDER BY
 -- ---------------------------------------------------------------------
+SELECT 'Q3. Creator leaderboard (creators with at least 2 valid pledges)' AS Report;
 SELECT  cr.DisplayName                  AS Creator,
         COUNT(DISTINCT c.CampaignID)    AS CampaignsWithPledges,
         COUNT(p.PledgeID)               AS ValidPledges,
@@ -67,6 +70,7 @@ ORDER BY TotalPledged DESC;
 --     Use case: finance monitoring of processor success / failure / refunds.
 --     Covers: INNER JOIN (4 tables), COUNT, SUM, GROUP BY, ORDER BY
 -- ---------------------------------------------------------------------
+SELECT 'Q4. Payment outcomes by campaign currency and payment method' AS Report;
 SELECT  c.Currency                      AS CampaignCurrency,
         pay.Method                      AS PaymentMethod,
         pay.Status                      AS PaymentOutcome,
@@ -84,24 +88,25 @@ ORDER BY c.Currency, TotalAmount DESC, pay.Method;
 -- Q5. Payout reconciliation: does each payout match the collected pledges?
 --     Use case: audit that creator payouts equal money actually collected,
 --               and show the effective platform fee rate.
---     Covers: INNER JOIN (4 tables), WHERE, SUM, calculated columns,
+--     Covers: INNER and LEFT JOINs, WHERE, SUM, calculated columns,
 --             GROUP BY, ORDER BY
 -- ---------------------------------------------------------------------
+SELECT 'Q5. Payout reconciliation: does each payout match the collected pledges?' AS Report;
 SELECT  c.Title                                              AS Campaign,
         po.GrossAmount,
         po.PlatformFee,
-        po.NetAmount,
-        ROUND(po.PlatformFee * 100.0 / po.GrossAmount, 2)    AS FeePercent,
-        SUM(p.Amount)                                        AS CollectedPledges,
-        po.GrossAmount - SUM(p.Amount)                       AS Difference,
+        po.GrossAmount - po.PlatformFee                       AS NetAmount,
+        ROUND(po.PlatformFee * 100.0 / NULLIF(po.GrossAmount, 0), 2)    AS FeePercent,
+        COALESCE(SUM(p.Amount), 0)                           AS CollectedPledges,
+        po.GrossAmount - COALESCE(SUM(p.Amount), 0)                       AS Difference,
         po.PaidAt
 FROM    PAYOUT po
 JOIN    CAMPAIGN    c  ON c.CampaignID  = po.CampaignID
-JOIN    REWARD_TIER rt ON rt.CampaignID = c.CampaignID
-JOIN    PLEDGE      p  ON p.TierID      = rt.TierID
+LEFT JOIN REWARD_TIER rt ON rt.CampaignID = c.CampaignID
+LEFT JOIN PLEDGE      p  ON p.TierID      = rt.TierID
+                         AND p.Status    = 'Collected'
 WHERE   po.Status = 'Sent'
-  AND   p.Status  = 'Collected'
-GROUP BY po.PayoutID, c.Title, po.GrossAmount, po.PlatformFee, po.NetAmount, po.PaidAt
+GROUP BY po.PayoutID, c.Title, po.GrossAmount, po.PlatformFee, po.PaidAt
 ORDER BY po.PaidAt;
 
 
@@ -111,6 +116,7 @@ ORDER BY po.PaidAt;
 --     Covers: WHERE with IN, INNER JOIN (4 tables, USER_ACCOUNT joined
 --             as the reporter), ORDER BY
 -- ---------------------------------------------------------------------
+SELECT 'Q6. Trust & safety moderation queue (unresolved reports)' AS Report;
 SELECT  r.ReportID,
         c.Title        AS Campaign,
         cr.DisplayName AS Creator,
@@ -132,6 +138,7 @@ ORDER BY r.ReportedAt;
 --     Use case: tell creators which tiers to rework or promote.
 --     Covers: INNER JOIN + LEFT JOIN with IS NULL, WHERE, ORDER BY
 -- ---------------------------------------------------------------------
+SELECT 'Q7. Reward tiers nobody has successfully backed (LEFT JOIN anti-join)' AS Report;
 SELECT  c.Title           AS Campaign,
         rt.Title          AS RewardTier,
         rt.MinPledgeAmount,
@@ -148,12 +155,14 @@ ORDER BY c.Title, rt.MinPledgeAmount;
 -- Q8. SUBQUERY (IN): backers currently supporting a Live campaign
 --     Use case: audience for a "campaign ending soon" email.
 -- ---------------------------------------------------------------------
+SELECT 'Q8. SUBQUERY (IN): backers currently supporting a Live campaign' AS Report;
 SELECT  u.FullName AS Backer,
-        b.ShippingCity,
+        pc.City AS ShippingCity,
         b.DefaultCurrency,
         b.BackerSince
 FROM    BACKER b
 JOIN    USER_ACCOUNT u ON u.UserID = b.UserID
+LEFT JOIN POSTAL_CODE pc ON pc.PostalCode = b.ShippingPostalCode
 WHERE   b.UserID IN (SELECT p.BackerID
                      FROM   PLEDGE p
                      JOIN   REWARD_TIER rt ON rt.TierID    = p.TierID
@@ -167,6 +176,7 @@ ORDER BY u.FullName;
 -- Q9. SUBQUERY (scalar, uncorrelated): pledges above the platform average
 --     Use case: identify high-value backers for recognition.
 -- ---------------------------------------------------------------------
+SELECT 'Q9. SUBQUERY (scalar, uncorrelated): pledges above the platform average' AS Report;
 SELECT  p.PledgeID,
         u.FullName AS Backer,
         c.Title    AS Campaign,
@@ -189,6 +199,7 @@ ORDER BY p.Amount DESC, p.PledgeID;
 --      (tier priced above the average tier price of ITS OWN campaign)
 --      Use case: show each campaign's top-end rewards.
 -- ---------------------------------------------------------------------
+SELECT 'Q10. CORRELATED SUBQUERY #1: premium tier(s) in each campaign' AS Report;
 SELECT  c.Title            AS Campaign,
         rt.Title           AS PremiumTier,
         rt.MinPledgeAmount
@@ -204,6 +215,7 @@ ORDER BY c.Title, rt.MinPledgeAmount DESC;
 -- Q11. CORRELATED SUBQUERY #2 (NOT EXISTS): pledges with no successful payment
 --      Use case: follow-up list for failed, refunded or cancelled pledges.
 -- ---------------------------------------------------------------------
+SELECT 'Q11. CORRELATED SUBQUERY #2 (NOT EXISTS): pledges with no successful payment' AS Report;
 SELECT  p.PledgeID,
         u.FullName AS Backer,
         c.Title    AS Campaign,
@@ -225,6 +237,7 @@ ORDER BY p.PledgeID;
 --      campaigns reported at least as often as the creator posted updates
 --      Use case: flag campaigns where creator communication may be lacking.
 -- ---------------------------------------------------------------------
+SELECT 'Q12. CORRELATED SUBQUERY #3 (scalar counts per campaign):' AS Report;
 SELECT  c.Title  AS Campaign,
         c.Status AS CampaignStatus,
         (SELECT COUNT(*) FROM CAMPAIGN_UPDATE cu
@@ -237,3 +250,12 @@ WHERE   (SELECT COUNT(*) FROM REPORT r
      >= (SELECT COUNT(*) FROM CAMPAIGN_UPDATE cu
           WHERE cu.CampaignID = c.CampaignID)
 ORDER BY c.Title;
+
+SELECT 'View 1. Campaign funding progress' AS Report;
+SELECT * FROM vw_campaign_funding_progress ORDER BY PercentFunded DESC, CampaignID;
+
+SELECT 'View 2. Backer activity' AS Report;
+SELECT * FROM vw_backer_activity ORDER BY ValidPledgeTotal DESC, Backer, BackerID;
+
+SELECT 'View 3. Creator payout summary' AS Report;
+SELECT * FROM vw_creator_payout_summary ORDER BY TotalNetPaid DESC, CreatorID;

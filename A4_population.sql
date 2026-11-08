@@ -1,6 +1,6 @@
--- CP363 Assignment 3: database population script
+-- CP363 Assignment 4 | Group 43 - CrowdFunding DB | Normalized sample data
 -- All people, campaigns, and processor transaction references are fictional.
-USE crowdfunding;
+USE crowdfunding_a4;
 START TRANSACTION;
 
 INSERT INTO USER_ACCOUNT (UserID, Email, PasswordHash, FullName, Country) VALUES
@@ -25,15 +25,25 @@ INSERT INTO CREATOR (UserID,DisplayName,Bio,VerificationStatus,PayoutAccountToke
 (4,'BrightFrame Films','Independent documentary collective.','Pending',NULL,NULL),
 (5,'SoundSprout Audio','Accessible audio tools for creators.','Verified','tok_demo_005','2025-04-07 14:00:00');
 
-INSERT INTO BACKER (UserID,ShippingStreet,ShippingCity,ShippingPostalCode,DefaultCurrency,PledgeAnonymously,BackerSince) VALUES
-(6,'120 King Street W','Toronto','M5H 1J9','CAD',FALSE,'2024-11-03'),
-(7,'45 Market Street','San Francisco','94105','USD',FALSE,'2025-01-12'),
-(8,'88 Queen Street','Waterloo','N2J 2W2','CAD',TRUE,'2025-02-01'),
-(9,'16 Camden Road','London','NW1 9DP','GBP',FALSE,'2025-02-17'),
-(10,'230 Bay Street','Toronto','M5J 2W4','CAD',FALSE,'2025-03-09'),
-(11,'77 Pine Avenue','Seattle','98101','USD',TRUE,'2025-04-22'),
-(12,'9 University Avenue','Ottawa','K1N 6N5','CAD',FALSE,'2025-06-05'),
-(13,'31 Rose Lane','Bristol','BS1 4QA','GBP',FALSE,'2025-07-19');
+INSERT INTO POSTAL_CODE (PostalCode, City) VALUES
+('94105', 'San Francisco'),
+('98101', 'Seattle'),
+('BS1 4QA', 'Bristol'),
+('K1N 6N5', 'Ottawa'),
+('M5H 1J9', 'Toronto'),
+('M5J 2W4', 'Toronto'),
+('N2J 2W2', 'Waterloo'),
+('NW1 9DP', 'London');
+
+INSERT INTO BACKER (UserID,ShippingStreet,ShippingPostalCode,DefaultCurrency,PledgeAnonymously,BackerSince) VALUES
+(6,'120 King Street W','M5H 1J9','CAD',FALSE,'2024-11-03'),
+(7,'45 Market Street','94105','USD',FALSE,'2025-01-12'),
+(8,'88 Queen Street','N2J 2W2','CAD',TRUE,'2025-02-01'),
+(9,'16 Camden Road','NW1 9DP','GBP',FALSE,'2025-02-17'),
+(10,'230 Bay Street','M5J 2W4','CAD',FALSE,'2025-03-09'),
+(11,'77 Pine Avenue','98101','USD',TRUE,'2025-04-22'),
+(12,'9 University Avenue','K1N 6N5','CAD',FALSE,'2025-06-05'),
+(13,'31 Rose Lane','BS1 4QA','GBP',FALSE,'2025-07-19');
 
 INSERT INTO CATEGORY (CategoryID,Name,Slug,Description,IsActive,CreatedAt) VALUES
 (1,'Technology','technology','Devices and practical inventions.',TRUE,'2024-01-01'),
@@ -111,9 +121,9 @@ INSERT INTO PAYMENT (PaymentID,PledgeID,Amount,Method,ProcessorTxnRef,Status,Att
 (15,14,15.00,'Card','demo_txn_0015','Succeeded','2026-09-01 21:01:00'),
 (16,15,20.00,'Card','demo_txn_0016','Refunded','2025-07-05 15:31:00');
 
-INSERT INTO PAYOUT (PayoutID,CampaignID,GrossAmount,PlatformFee,NetAmount,Status,PaidAt) VALUES
-(1,1,270.00,13.50,256.50,'Sent','2025-03-20 12:00:00'),
-(2,4,155.00,7.75,147.25,'Sent','2025-08-10 12:00:00');
+INSERT INTO PAYOUT (PayoutID,CampaignID,GrossAmount,PlatformFee,Status,PaidAt) VALUES
+(1,1,270.00,13.50,'Sent','2025-03-20 12:00:00'),
+(2,4,155.00,7.75,'Sent','2025-08-10 12:00:00');
 
 INSERT INTO CAMPAIGN_UPDATE (CampaignID,UpdateNo,Title,Body,Visibility,PostedAt) VALUES
 (1,1,'Prototype complete','The charging layout passed initial bench tests.','Public','2025-02-01 10:00:00'),
@@ -136,6 +146,7 @@ COMMIT;
 -- Verify row counts in every table.
 SELECT 'USER_ACCOUNT' AS TableName, COUNT(*) AS RowCount FROM USER_ACCOUNT
 UNION ALL SELECT 'CREATOR', COUNT(*) FROM CREATOR
+UNION ALL SELECT 'POSTAL_CODE', COUNT(*) FROM POSTAL_CODE
 UNION ALL SELECT 'BACKER', COUNT(*) FROM BACKER
 UNION ALL SELECT 'CATEGORY', COUNT(*) FROM CATEGORY
 UNION ALL SELECT 'CAMPAIGN', COUNT(*) FROM CAMPAIGN
